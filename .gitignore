@@ -1,0 +1,40 @@
+# ─── SECRET KEYS — NEVER COMMIT ────────────────────────────
+.env
+
+# ─── Python ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ─── Virtual Environment ────────────────────────────────────
+venv/
+env/
+.venv/
+
+# ─── ChromaDB ───────────────────────────────────────────────
+chroma_store/
+
+# ─── Outputs & Logs ─────────────────────────────────────────
+outputs/
+*.log
+
+# ─── OS Files ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── VS Code ────────────────────────────────────────────────
+.vscode/
+*.code-workspace
+
+# ─── PDFs (too large for GitHub) ────────────────────────────
+sample_documents/*.pdf
+
+# ─── Jupyter ────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
