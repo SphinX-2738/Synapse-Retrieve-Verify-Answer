@@ -15,6 +15,9 @@ nltk==3.9.1
 # ─── Vector Store ───────────────────────────────────────────
 chromadb==0.5.23
 
+# ─── NumPy pinned below 2.0 (chromadb 0.4.x used np.float_ removed in 2.0) ──
+numpy<2.0
+
 # ─── Embeddings local fallback ──────────────────────────────
 sentence-transformers==3.1.1
 
