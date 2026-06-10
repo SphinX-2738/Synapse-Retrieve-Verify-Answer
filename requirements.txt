@@ -13,7 +13,7 @@ pdfplumber==0.11.4
 nltk==3.9.1
 
 # ─── Vector Store ───────────────────────────────────────────
-chromadb==0.4.24
+chromadb==0.5.23
 
 # ─── Embeddings local fallback ──────────────────────────────
 sentence-transformers==3.1.1

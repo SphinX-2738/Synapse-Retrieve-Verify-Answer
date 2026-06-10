@@ -42,19 +42,27 @@ def get_or_create_collection(session_id: str) -> chromadb.Collection:
 
 
 def cleanup_old_sessions():
+    """
+    ChromaDB 0.5.x: list_collections() returns collection names as strings.
+    We fetch each collection individually to read its metadata.
+    """
     client = _get_client()
     cutoff = datetime.now() - timedelta(hours=config.SESSION_EXPIRY_HOURS)
     cutoff_timestamp = cutoff.timestamp()
     deleted = 0
     try:
-        collections = client.list_collections()
-        for col in collections:
-            if not col.name.startswith("session_"):
+        collection_names = client.list_collections()  # returns list of strings in 0.5.x
+        for name in collection_names:
+            if not name.startswith("session_"):
                 continue
-            created_at = float(col.metadata.get("created_at", 0)) if col.metadata else 0
-            if created_at < cutoff_timestamp:
-                client.delete_collection(col.name)
-                deleted += 1
+            try:
+                col = client.get_collection(name)
+                created_at = float(col.metadata.get("created_at", 0)) if col.metadata else 0
+                if created_at < cutoff_timestamp:
+                    client.delete_collection(name)
+                    deleted += 1
+            except Exception:
+                continue
     except Exception as e:
         print(f"   Cleanup warning: {e}")
     if deleted > 0:
@@ -95,7 +103,6 @@ def store_chunks(chunks: list[Chunk], session_id: str) -> dict:
     print(f"   Generating embeddings for {len(new_chunks)} chunks...")
     embeddings = embed_texts(texts)
 
-    # Verify counts match before storing
     if len(embeddings) != len(new_chunks):
         raise ValueError(
             f"Embedding count mismatch: got {len(embeddings)} embeddings "
