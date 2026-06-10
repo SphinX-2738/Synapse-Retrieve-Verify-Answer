@@ -32,9 +32,6 @@ desktop.ini
 .vscode/
 *.code-workspace
 
-# ─── PDFs (too large for GitHub) ────────────────────────────
-sample_documents/*.pdf
-
 # ─── Jupyter ────────────────────────────────────────────────
 .ipynb_checkpoints/
 *.ipynb
