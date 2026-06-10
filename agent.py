@@ -50,21 +50,19 @@ def plan(question: str, session_id: str) -> dict:
 
     plan_prompt = f"""You are a research assistant with access to uploaded documents.
 
-Available documents: {doc_list_str}
+Available documents in this session: {doc_list_str}
 
 Recent conversation:
 {history_str}
 
 Question: {question}
 
-Decide whether to search the uploaded documents or answer from general knowledge.
-
-Rules:
-- Choose "search" if the question is about the uploaded documents or their content
-- Choose "search" if the question asks about specific papers, findings, or details
-- Choose "answer_directly" if it's a general knowledge question unrelated to the docs
-- Choose "answer_directly" if no documents are uploaded
-- Choose "answer_directly" for greetings, meta questions, or clarifications
+DECISION RULES:
+- If documents are available AND the question could possibly relate to their content → choose "search"
+- If the question asks about a person, name, content, skills, experience, or any details → choose "search"
+- If documents are uploaded, always prefer "search" unless the question is pure general knowledge (math, geography, etc.)
+- Only choose "answer_directly" if: no documents are uploaded, OR question is clearly unrelated to any document
+- When in doubt → choose "search"
 
 Respond ONLY with valid JSON, no other text:
 {{"action": "search" or "answer_directly", "reasoning": "one sentence"}}"""
