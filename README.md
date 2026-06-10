@@ -24,11 +24,24 @@ This decision-evaluate-retry loop is what makes it an agent, not just a pipeline
 
 ## Live Demo
 
-🔗 **[synapse.onrender.com](https://synapse-retrieve-verify-answer.onrender.com)**
+🔗 **[synapse-t46u.onrender.com](https://synapse-t46u.onrender.com)**
 
 > First load may take 30-40 seconds (Render free tier cold start). The UI shows a warm-up indicator automatically.
 
 Pre-loaded sample documents available on first visit — no upload required to demo.
+
+---
+
+## Screenshots
+
+### Landing Page
+![Landing page showing the 5-step agentic loop diagram](screenshots/screenshot-landing.png)
+
+### Cited Answer with Page Numbers
+![Answer panel showing inline citations with page numbers](screenshots/screenshot-answer.png)
+
+### Self-Evaluation Scores
+![Radar chart and score bars showing groundedness, relevance, citation accuracy](screenshots/screenshot-scores.png)
 
 ---
 
@@ -150,6 +163,10 @@ synapse/
 ├── sample_documents/
 │   ├── attention_is_all_you_need.pdf
 │   └── rag_paper.pdf
+├── screenshots/
+│   ├── screenshot-landing.png
+│   ├── screenshot-answer.png
+│   └── screenshot-scores.png
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -244,8 +261,6 @@ Buffer                 ~100MB
 ─────────────────────────────
 Total                  ~320MB  ✅ well under 512MB
 ```
-
-Gemini API for embeddings = ~0MB RAM (runs on Google's servers).
 
 ---
 
