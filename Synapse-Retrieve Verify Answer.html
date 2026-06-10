@@ -1443,6 +1443,24 @@ function saveSessions(){
   try { localStorage.setItem(SESSION_KEY, JSON.stringify(SESSIONS)); } catch(e){}
 }
 
+function saveKB(){
+  try { localStorage.setItem("synapse_kb_" + SESSION_ID, JSON.stringify(KB)); } catch(e){}
+}
+
+function loadKB(sid){
+  try {
+    const raw = localStorage.getItem("synapse_kb_" + sid);
+    if(raw){
+      const saved = JSON.parse(raw);
+      if(Array.isArray(saved)){
+        KB.length = 0;
+        saved.forEach(d => KB.push(d));
+        renderChips();
+      }
+    }
+  } catch(e){}
+}
+
 function renderSessionList(){
   const list = document.getElementById("sessionList");
   if(!list) return;
@@ -1498,6 +1516,7 @@ function resetUIForNewSession(){
 
 async function loadSessionData(sid){
   resetUIForNewSession();
+  loadKB(sid);
   try {
     const histKey = "synapse_hist_" + sid;
     const raw = localStorage.getItem(histKey);
@@ -1543,6 +1562,7 @@ function renderChips(){
       e.stopPropagation();
       KB.splice(idx,1);
       renderChips();
+      saveKB();
       showToast("Removed "+doc.name);
     });
     wrap.appendChild(chip);
@@ -1632,6 +1652,7 @@ function renderChips(){
         session_id: data.session_id || SESSION_ID
       });
       renderChips();
+      saveKB();
       showToast(file.name+" indexed");
     }catch(err){
       KB.push({
