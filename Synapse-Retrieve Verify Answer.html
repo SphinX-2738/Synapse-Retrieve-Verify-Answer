@@ -1613,11 +1613,23 @@ function renderChips(){
       const r=await fetch("/upload",{method:"POST",body:fd});
       if(!r.ok) throw new Error("upload failed");
       const data=await r.json();
+      // If backend assigned a different session_id, sync frontend
+      if(data.session_id && data.session_id !== SESSION_ID){
+        SESSION_ID = data.session_id;
+      }
+      // Update current session title to reflect uploaded doc
+      const sess = SESSIONS.find(s => s.id === SESSION_ID);
+      if(sess) {
+        sess.title = file.name.replace('.pdf','');
+        saveSessions();
+        renderSessionList();
+      }
       KB.push({
-        name:file.name,
-        pages: data.pages || data.num_pages || estimatePages(file.size),
-        chunks: data.chunks || data.num_chunks || Math.max(1, Math.round((data.pages||estimatePages(file.size))*4)),
+        name: file.name,
+        pages: (data.pdf && data.pdf.total_pages) ? data.pdf.total_pages : data.pages || estimatePages(file.size),
+        chunks: (data.chunks && data.chunks.total_chunks) ? data.chunks.total_chunks : (data.storage && data.storage.stored) ? data.storage.stored : Math.max(1, Math.round((data.pages||estimatePages(file.size))*4)),
         doc_id: data.doc_id || file.name,
+        session_id: data.session_id || SESSION_ID
       });
       renderChips();
       showToast(file.name+" indexed");
