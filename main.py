@@ -294,6 +294,17 @@ async def _self_ping():
 # ─── Sample Docs Preloader ───────────────────────────────────
 
 async def _preload_sample_docs():
+    """
+    Runs in background — never blocks uvicorn startup.
+    Waits 3s for full startup, then embeds in a thread executor.
+    """
+    await asyncio.sleep(3)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _preload_sample_docs_sync)
+
+
+def _preload_sample_docs_sync():
+    """Synchronous worker — safe to run in thread executor."""
     DEMO_SESSION = "demo_session"
 
     existing = list_documents(DEMO_SESSION)
@@ -325,7 +336,8 @@ async def _preload_sample_docs():
         except Exception as e:
             print(f"  ⚠️  {filename}: {e}")
 
-    print("  Sample docs ready.\n")
+    print("  Sample docs ready.
+")
 
 
 # ─── Run ─────────────────────────────────────────────────────
