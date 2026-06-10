@@ -35,17 +35,27 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 4. ChromaDB 0.4.24 over 0.5.15
+## 4. ChromaDB 0.5.23 over 0.4.24
 
-**Decision:** Downgraded ChromaDB from 0.5.15 to 0.4.24.
+**Decision:** Upgraded ChromaDB from 0.4.24 to 0.5.23 for Render deployment.
 
-**Why:** ChromaDB 0.5.x has a broken telemetry system that floods the console with `capture() takes 1 positional argument but 3 were given` on every collection access. The env var suppression (`ANONYMIZED_TELEMETRY=False`) doesn't work reliably on Windows because ChromaDB initializes its telemetry at import time. 0.4.24 has the same functionality without the broken telemetry code.
+**Why:** ChromaDB 0.4.24 uses `np.float_` which was removed in NumPy 2.0. Render's build environment installs NumPy 2.x by default, causing an `AttributeError` at import time and crashing the app on startup. 0.5.23 is fully NumPy 2.0 compatible.
 
-**Tradeoff:** Older version, but the vector storage API is identical and stable.
+**Breaking change handled:** `list_collections()` in 0.5.x returns plain strings instead of collection objects with `.name` and `.metadata`. Updated `cleanup_old_sessions()` in `vector_store.py` to call `get_collection(name)` separately to read metadata.
+
+**Local development note:** Kept `chromadb==0.4.24` locally during development (Windows + Python 3.11 doesn't hit the NumPy 2.0 issue). Pinned 0.5.23 only in `requirements.txt` for Render.
 
 ---
 
-## 5. Manual agent loop over LangChain/LlamaIndex
+## 5. sentence-transformers removed from requirements.txt
+
+**Decision:** Removed `sentence-transformers` from `requirements.txt` entirely for Render deployment.
+
+**Why:** `sentence-transformers` pulls in PyTorch (`torch-2.12.0`, 532MB) plus NVIDIA CUDA libraries (nvidia_cusparselt 170MB, nvidia_nccl 206MB) — over 900MB of dependencies on a 512MB RAM free tier instance. The app never uses sentence-transformers on Render because `EMBED_MODE=gemini` is set in env vars. The local fallback in `embedder.py` is still available for local development — it only imports `sentence_transformers` inside `_embed_local()` which never runs on Render.
+
+---
+
+## 6. Manual agent loop over LangChain/LlamaIndex
 
 **Decision:** Build the entire agent loop manually in `agent.py` without any orchestration framework.
 
@@ -55,7 +65,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 6. ChromaDB in-process over Pinecone/Weaviate
+## 7. ChromaDB in-process over Pinecone/Weaviate
 
 **Decision:** Use ChromaDB's `PersistentClient` running in-process instead of a managed vector database.
 
@@ -65,7 +75,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 7. Session-per-user isolation in ChromaDB
+## 8. Session-per-user isolation in ChromaDB
 
 **Decision:** Each user session gets its own ChromaDB collection (`session_{session_id}`).
 
@@ -75,7 +85,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 8. get_or_create_collection() over get → except → create pattern
+## 9. get_or_create_collection() over get → except → create pattern
 
 **Decision:** Use ChromaDB's built-in `get_or_create_collection()` instead of `try: get_collection() except: create_collection()`.
 
@@ -83,7 +93,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 9. Cosine similarity over L2 distance for vector search
+## 10. Cosine similarity over L2 distance for vector search
 
 **Decision:** Configure ChromaDB collections with `hnsw:space: cosine`.
 
@@ -91,7 +101,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 10. 768 dimensions capped from Gemini's 3072 max
+## 11. 768 dimensions capped from Gemini's 3072 max
 
 **Decision:** Set `output_dimensionality=768` when calling Gemini embedding API instead of using the full 3072.
 
@@ -99,7 +109,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 11. extract_words() over extract_text() in pdfplumber
+## 12. extract_words() over extract_text() in pdfplumber
 
 **Decision:** Use `page.extract_words(use_text_flow=True)` instead of `page.extract_text()` for PDF extraction.
 
@@ -109,7 +119,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 12. 0.7s delay between Gemini embedding calls
+## 13. 0.7s delay between Gemini embedding calls
 
 **Decision:** Add `time.sleep(0.7)` between every individual Gemini embedding API call.
 
@@ -119,7 +129,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 13. llm_survey.pdf removed from pre-loaded sample docs
+## 14. llm_survey.pdf removed from pre-loaded sample docs
 
 **Decision:** Removed `llm_survey.pdf` (417 chunks) from `config.SAMPLE_DOCS` pre-load list.
 
@@ -129,7 +139,7 @@ This separates "followed a tutorial" from "made deliberate engineering choices."
 
 ---
 
-## 14. Self-ping keep-alive over paid Render tier
+## 15. Self-ping keep-alive over paid Render tier
 
 **Decision:** Implement 3-layer keep-alive strategy instead of upgrading to Render paid tier.
 
@@ -142,8 +152,40 @@ This is sufficient for a portfolio/demo context. Production would use paid tier 
 
 ---
 
-## 15. SSE streaming over polling for chat responses
+## 16. SSE streaming over polling for chat responses
 
 **Decision:** Implement `/chat` as Server-Sent Events (SSE) streaming endpoint instead of a regular JSON response.
 
 **Why:** The agent loop takes 3-8 seconds (multiple LLM calls for planning, generation, evaluation). Without streaming, the user sees a blank loading state for the full duration. With SSE, status updates flow in real-time: "Planning..." → "Retrieving..." → "Generating..." → "Evaluating...". This dramatically improves perceived performance and lets the user understand what the agent is doing at each step.
+
+---
+
+## 17. Sample doc preloading in thread executor over blocking startup
+
+**Decision:** Run sample document embedding in `asyncio.run_in_executor()` instead of directly in the FastAPI lifespan coroutine.
+
+**Why:** Embedding calls to the Gemini API are synchronous and blocking. Running them directly inside the async lifespan function blocked uvicorn's event loop during startup — the app never reported "Application startup complete" and Render cancelled the deploy after a timeout. Moving to a thread executor lets uvicorn start immediately while embedding runs in the background.
+
+**Implementation:** Split `_preload_sample_docs()` into an async wrapper that schedules work on the executor, and `_preload_sample_docs_sync()` that does the actual blocking work.
+
+---
+
+## 18. Docstract-style history rail over session sidebar
+
+**Decision:** Replaced the multi-session sidebar (New Chat, session switching) with a simple horizontal history rail at the bottom of the page — matching the Docstract pattern.
+
+**Why:** The session sidebar relied on `localStorage` session ID matching across page loads. Every redeploy on Render resets the server state, generating new session IDs that don't match old localStorage keys — causing history to silently disappear on session switch. The history rail stores all queries in a single `localStorage` key (`synapse_history_v1`) tied to the page session, not a server-side session ID. Simpler, more reliable, and consistent with Docstract's proven pattern.
+
+**Tradeoff:** No multi-session management. All history is per-browser-session. Acceptable for a demo tool — users rarely need to switch between parallel research sessions.
+
+---
+
+## 19. Clean error messages for Groq rate limits
+
+**Decision:** Detect Groq daily token limit (TPD) errors separately from per-minute rate limits and fail immediately with a user-friendly message.
+
+**Why:** Groq free tier allows 100,000 tokens/day. When the daily limit is hit, retrying (as the standard rate limit handler does) wastes the remaining token budget and delays the user by 6+ seconds before showing the same error. TPD errors are detected by checking for "tokens per day" in the error string, and fail immediately with: "Daily API limit reached. Please try again in X minutes." The wait time is extracted from the Groq error response.
+
+**Rate limits documented:**
+- Per-minute: 6,000 tokens/min on LLaMA 3.3 70B free tier → handled by retry with backoff
+- Per-day: 100,000 tokens/day → handled by immediate clean failure

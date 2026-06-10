@@ -697,6 +697,17 @@ def _call_llm_with_retry(
             last_error = str(e)
             error_str = str(e).lower()
 
+            # Daily token limit (TPD) — no point retrying, fail immediately with clean message
+            if "tokens per day" in error_str or "tpd" in error_str:
+                import re
+                wait_match = re.search(r"try again in (\d+m[\d.]+s)", str(e))
+                wait_str = wait_match.group(1) if wait_match else "a few minutes"
+                raise RuntimeError(
+                    f"Daily API limit reached. Groq free tier allows 100,000 tokens/day. "
+                    f"Please try again in {wait_str}."
+                )
+
+            # Per-minute rate limit — wait and retry
             if "rate limit" in error_str or "429" in error_str:
                 wait = retry_delay * (attempt + 1)
                 print(f"   Groq rate limit — waiting {wait}s")
