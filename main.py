@@ -336,8 +336,7 @@ def _preload_sample_docs_sync():
         except Exception as e:
             print(f"  ⚠️  {filename}: {e}")
 
-    print("  Sample docs ready.
-")
+    print("  Sample docs ready.")
 
 
 # ─── Run ─────────────────────────────────────────────────────
